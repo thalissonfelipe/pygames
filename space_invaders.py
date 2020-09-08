@@ -42,7 +42,7 @@ class Player(pygame.sprite.Sprite):
         self.shot_sound.set_volume(0.05)
         self.explosion_sound.set_volume(0.09)
 
-    def update(self, fps=None, score=None):
+    def update(self):
         keys = pygame.key.get_pressed()
         keys_pressed = [keys[key] for key in (K_LEFT, K_RIGHT, K_UP, K_DOWN)]
         left, right, up, down = keys_pressed
@@ -92,7 +92,7 @@ class Shot(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom=pos)
         self.speed = -11
 
-    def update(self, fps=None, score=None):
+    def update(self):
         self.rect.move_ip(0, self.speed)
         if self.rect.top <= 0:
             self.kill()
@@ -122,7 +122,7 @@ class Alien(pygame.sprite.Sprite):
         self.life = index + 1 * 2 - 1
         self.padding = 3
 
-    def update(self, fps=None, score=None):
+    def update(self):
         global SCORE
         if self.animation_count + 1 > len(self.aliens_img)*self.animatecycle:
             self.animation_count = 0
@@ -160,7 +160,7 @@ class Explosion(pygame.sprite.Sprite):
         self.explosion_sound = load_sound(SOUNDS_DIR, 'explosion.wav')
         self.explosion_sound.set_volume(0.09)
 
-    def update(self, fps=None, score=None):
+    def update(self):
         self.index += 1
         self.image = self.images[self.index]
         if self.index == len(self.images)-1:
@@ -169,23 +169,23 @@ class Explosion(pygame.sprite.Sprite):
 
 
 class Text(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, pos, width, type):
         super(Text, self).__init__(self.containers)
         self.font = pygame.font.SysFont('arial', 20)
         self.color = WHITE
-        self.width = WIDTH
+        self.width = width
         self.height = 20
+        self.text = 'FPS: ' if type == 'fps' else 'SCORE: '
+        self.value = 0
+        self.pos = pos
 
-    def update(self, fps=None, score=None):
-        text = 'FPS: ' + str(fps)
-        text += '                                                     '
-        text += 'SCORE: ' + str(score)
-        self.surf = self.font.render(text, 1, self.color)
+    def update(self):
+        self.surf = self.font.render(self.text + str(self.value), 1, self.color)
         self.image = pygame.Surface((self.width, self.height))
         self.image.blit(
             self.surf, (0, self.height/2 - self.surf.get_height()/2)
         )
-        self.rect = self.image.get_rect(topleft=(0, 0))
+        self.rect = self.image.get_rect(topleft=self.pos)
 
 
 def load_sound(dirname, file):
@@ -262,7 +262,8 @@ def main():
     Text.containers = all
 
     player = Player()
-    Text()
+    text_fps = Text((0, 0), 75, 'fps')
+    text_score = Text((WIDTH-130, 0), 130, 'score')
     pygame.time.set_timer(USEREVENT+1, 1000)
 
     while True:
@@ -274,8 +275,12 @@ def main():
             if event.type == USEREVENT+1:
                 Alien(randint(0, 2))
 
+        # update fps and score values
+        text_fps.value = int(clock.get_fps())
+        text_score.value = SCORE
+
         all.clear(screen, background)
-        all.update(int(clock.get_fps()), SCORE)
+        all.update()
         keys = pygame.key.get_pressed()
         firing = keys[K_SPACE]
         player.shot(firing, shots)
