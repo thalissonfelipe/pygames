@@ -11,6 +11,7 @@ This repository contains a list of simple games made with Python / Pygame.
 - Tic Tac Toe
 - Ping Pong
 - Break Bricks
+- Space Invaders
 
 ## TODO list
 
@@ -19,3 +20,4 @@ This repository contains a list of simple games made with Python / Pygame.
 - [ ] Add power up in the break bricks game.
 - [ ] Add score on game over screen in the break bricks game.
 - [ ] Add hit song in the break bricks game.
+- [ ] Add others scenes (menu, game, game over) in the space_invaders game
