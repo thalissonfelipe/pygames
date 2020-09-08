@@ -1,6 +1,7 @@
 import os
 import sys
 import pygame
+import numpy as np
 
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -8,6 +9,7 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 # global variables
 WIDTH, HEIGHT = 320, 360
 RECT_SIZE = (100, 100)
+IMAGE_SIZE = (80, 80)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -27,26 +29,28 @@ class Player:
         self.o_turn = Font().get_font("O's turn", RED, True)
         self.x_wins = Font().get_font('Player "X" wins', RED, True)
         self.o_wins = Font().get_font('Player "O" wins', RED, True)
-        self.x_pressed = Font().get_font('X', BLACK)
-        self.o_pressed = Font().get_font('O', BLACK)
         self.tied_font = Font().get_font('Nobody won', RED, True)
+        self.x = pygame.transform.scale(pygame.image.load('assets/tic_tac_toe/x.png').convert_alpha(), IMAGE_SIZE)
+        self.o = pygame.transform.scale(pygame.image.load('assets/tic_tac_toe/o.png').convert_alpha(), IMAGE_SIZE)
 
     def draw_turn(self, screen):
         if self.tied == 9: # all rects were pressed
             screen.blit(self.tied_font, (WIDTH//2-self.tied_font.get_width()//2, HEIGHT-self.tied_font.get_height()-PADDING))
+            self.winner = True
         elif not self.winner:
             font = self.x_turn if self.turn == X_TURN else self.o_turn
             screen.blit(font, (WIDTH//2-font.get_width()//2, HEIGHT-font.get_height()-PADDING))
         else:
             font = self.x_wins if self.turn == X_TURN else self.o_wins
             screen.blit(font, (WIDTH//2-font.get_width()//2, HEIGHT-font.get_height()-PADDING))
-        
 
     def draw_pressed(self, screen, rects):
         for rect in rects:
             if rect.pressed:
-                font = self.x_pressed if rect.pressed == X_TURN else self.o_pressed
-                screen.blit(font, (rect.rect.x+font.get_width()//2-2*PADDING, rect.rect.y-PADDING))
+                if rect.pressed == X_TURN:
+                    screen.blit(self.x, (rect.rect.x+self.x.get_width()//6, rect.rect.top+self.x.get_height()//6))
+                else:
+                    screen.blit(self.o, (rect.rect.x+self.o.get_width()//8, rect.rect.top+self.o.get_height()//6))
 
 
 class Rect(pygame.sprite.Sprite):
@@ -74,6 +78,7 @@ class TicTac:
     def __init__(self, screen):
         self.screen = screen
         self.create_rects()
+        self.create_combinations()
         self.player = Player()
 
     def update(self):
@@ -97,9 +102,10 @@ class TicTac:
         if self.player.winner or self.player.tied == 9:
             pygame.time.wait(2000)
             self.create_rects()
-            self.player = Player()
+            self.create_combinations()
             self.position = None
-    
+            self.player = Player()
+
     def draw(self):
         self.screen.fill(WHITE)
         self.draw_lines()
@@ -108,7 +114,6 @@ class TicTac:
         if self.player.winner:
             self.draw_winner_line()
         pygame.display.update()
-        self.handle_restart_game()
 
     def draw_lines(self):
         pygame.draw.line(self.screen, BLACK, (107.5, PADDING), (107.5, 315), LINE_WIDTH)
@@ -134,65 +139,45 @@ class TicTac:
             if not rect.pressed:
                 return False
 
-        if (rects[0].pressed == rects[1].pressed and
-                rects[1].pressed == rects[2].pressed):
-            return True
-
-        return False
+        return all(rect.pressed == rects[0].pressed for rect in rects)
 
     def draw_winner_line(self):
-        if self.position == 'first_row':
+        if self.position == 0:
             pygame.draw.line(self.screen, RED, (PADDING, 60), (WIDTH-PADDING, 60), LINE_WIDTH)
-        elif self.position == 'second_row':
+        elif self.position == 1:
             pygame.draw.line(self.screen, RED, (PADDING, 165), (WIDTH-PADDING, 165), LINE_WIDTH)
-        elif self.position == 'third_row':
+        elif self.position == 2:
             pygame.draw.line(self.screen, RED, (PADDING, 270), (WIDTH-PADDING, 270), LINE_WIDTH)
-        elif self.position == 'first_column':
-            pygame.draw.line(self.screen, RED, (54, PADDING), (54, HEIGHT-9*PADDING), LINE_WIDTH)
-        elif self.position == 'second_column':
-            pygame.draw.line(self.screen, RED, (158, PADDING), (158, HEIGHT-9*PADDING), LINE_WIDTH)
-        elif self.position == 'third_column':
+        elif self.position == 3:
+            pygame.draw.line(self.screen, RED, (55, PADDING), (55, HEIGHT-9*PADDING), LINE_WIDTH)
+        elif self.position == 4:
+            pygame.draw.line(self.screen, RED, (160, PADDING), (160, HEIGHT-9*PADDING), LINE_WIDTH)
+        elif self.position == 5:
             pygame.draw.line(self.screen, RED, (264, PADDING), (264, HEIGHT-9*PADDING), LINE_WIDTH)
-        elif self.position == 'diagonal':
+        elif self.position == 6:
             pygame.draw.line(self.screen, RED, (PADDING, PADDING), (WIDTH-PADDING, HEIGHT-9*PADDING), LINE_WIDTH)
-        else:
+        elif self.position == 7:
             pygame.draw.line(self.screen, RED, (WIDTH-PADDING, PADDING), (PADDING, HEIGHT-9*PADDING-PADDING), LINE_WIDTH)
 
     def check_win(self):
-        rects = self.rects.sprites()
         if not self.player.winner:
-            if self.is_pressed(rects[0:3]):
-                self.player.winner = True
-                self.player.turn = rects[0].pressed
-                self.position = 'first_row'
-            elif self.is_pressed(rects[3:6]):
-                self.player.winner = True
-                self.player.turn = rects[3].pressed
-                self.position = 'second_row'
-            elif self.is_pressed(rects[6:9]):
-                self.player.winner = True
-                self.player.turn = rects[6].pressed
-                self.position = 'third_row'
-            elif self.is_pressed(rects[0:9:3]):
-                self.player.winner = True
-                self.player.turn = rects[0].pressed
-                self.position = 'first_column'
-            elif self.is_pressed(rects[1:9:3]):
-                self.player.winner = True
-                self.player.turn = rects[1].pressed
-                self.position = 'second_column'
-            elif self.is_pressed(rects[2:9:3]):
-                self.player.winner = True
-                self.player.turn = rects[2].pressed
-                self.position = 'third_column'
-            elif self.is_pressed(rects[0:9:4]):
-                self.player.winner = True
-                self.player.turn = rects[0].pressed
-                self.position = 'diagonal'
-            elif self.is_pressed(rects[2:9:4]):
-                self.player.winner = True
-                self.player.turn = rects[2].pressed
-                self.position = '-diagonal'
+            for i, rects in enumerate(self.combinations):
+                if self.is_pressed(rects):
+                    self.player.winner = True
+                    self.player.turn = rects[0].pressed
+                    self.position = i
+        else:
+            self.handle_restart_game()
+
+    def create_combinations(self):
+        rects_matrix = np.reshape(self.rects.sprites(), (3, 3))
+        combinations = [row for row in rects_matrix]
+        for row in np.transpose(rects_matrix):
+            combinations.append(row)
+        combinations.append(np.diag(rects_matrix))
+        combinations.append(np.diag(np.fliplr(rects_matrix)))
+
+        self.combinations = combinations
 
 
 def main():
